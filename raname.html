@@ -1,0 +1,86 @@
+<input type='text' id='user' style='width: 50%; padding-left: 5px; border: 2px solid #555555;'>
+
+<br>
+<br>
+
+<textarea id='field' style='width: 50%; height: 20%; margin-top: 5px; padding-left: 10px; border: 2px solid #555555'> </textarea>
+
+<br>
+<br>
+
+<input type="button" value='Send message' onclick="send()"> <br>
+
+<br>
+
+<div id='output' style='height: 70%; overflow: auto; margin-top: 10px'></div>
+
+<script>
+	let mess=[];
+
+	field.focus();
+
+	function send(){
+		if(user.value=="") user.value='ID '+Math.round(Math.random()*1000000)/100000*1000000;
+
+		let data=new FormData();
+		data.append("value", field.value);
+		data.append("user", user.value);
+
+		field.value+="\n\r  Отправка данных...";
+		field.disabled=true;
+
+		let xhr=new XMLHttpRequest();
+		xhr.responseType="json";
+
+		xhr.open("POST", "receive.php");
+		xhr.send(data);
+
+		xhr.onload=function(){
+			
+			field.disabled=false;
+			field.focus();
+			field.value="";
+
+			let cnt=mess.length;
+			mess[cnt]=[];
+			mess[cnt][1]=[];
+			mess[cnt][1][0]=xhr.response["data"]["user"];
+			mess[cnt][1][1]=xhr.response["data"]["value"];
+			update();
+		}
+
+		
+	}
+
+	field.addEventListener("keyup", (e)=>{
+		if(e.keyCode==13){
+			field.value=field.value.replace(/\r?\n/g,"");
+		if(field.value!="")
+			send();
+		e.preventDefault();
+	}
+	});
+	
+
+	function post(id){
+		return `<div style = 'font-family: arial; margin-top: 10px;'><div style = 'font-size: 20px; font-weight: bold;'>${mess[id][1][0]}</div>
+		<div style = 'font-size: 15px;'>${mess[id][1][1]}</div></div>`;
+	}
+	
+
+	function update(){
+		let out="";
+		for(let i=(mess.length-1); i>=0; i--){
+			out+=post(i);
+		}
+		output.innerHTML=out;
+	}
+
+
+	var source = new EventSource("sse.php");
+	source.onmessage=function(e){
+		data=JSON.parse(e.data);
+		mess=Object.keys(data).map((key)=> [Number(key), data[key]]);
+		update();
+	};
+</script>
